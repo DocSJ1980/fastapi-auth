@@ -15,6 +15,7 @@ from fastapi_todo_app.models.user_model import User
 from fastapi_todo_app.models.verification_model import VerificationToken
 from fastapi_todo_app.schemas.user_schema import Register_User
 from fastapi_todo_app.services.email_service import send_verification_email
+from fastapi_todo_app.schemas.verification_schema import VerificationResponse
 
 user_router = APIRouter(
     prefix="/user", tags=["user"], responses={404: {"description": "Not found"}}
@@ -63,26 +64,29 @@ async def regiser_user(
 
 @user_router.get("/verify/{token}")
 async def verify_email(token: str, session: Annotated[Session, Depends(get_session)]):
-    verification = session.get(VerificationToken, token)
+    verification = session.query(VerificationToken).filter(
+        VerificationToken.token == token,
+        VerificationToken.is_used == False
+    ).first()
     
-    if not verification or verification.is_used:
+    if not verification:
         raise HTTPException(status_code=400, detail="Invalid or expired verification token")
     
     if verification.expires_at < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Verification token has expired")
     
-    user = session.get(User, verification.user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-        
+    user = session.query(User).filter(User.id == verification.user_id).first()
     user.is_verified = True
-    verification.is_used = True
     
-    session.add(user)
-    session.add(verification)
+    # Delete the verification token instead of marking it as used
+    session.delete(verification)
     session.commit()
     
-    return {"message": "Email verified successfully"}
+    return VerificationResponse(
+            success=True,
+            message="Email verified successfully",
+            data={"email": user.email}
+        )
 
 
 @user_router.get("/me")

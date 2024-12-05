@@ -16,7 +16,7 @@ def send_verification_email(to_email: str, token: str):
     msg['To'] = to_email
     msg['Subject'] = "Verify your email address"
     
-    verification_link = f"{FRONTEND_URL}/verify-email?token={token}"
+    verification_link = f"{FRONTEND_URL}/auth/new-verification?token={token}"
     body = f"""
     Hello!
     
