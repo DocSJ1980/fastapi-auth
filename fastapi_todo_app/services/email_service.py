@@ -52,7 +52,7 @@ def send_forgot_password_email(to_email: str, token: str):
     msg["To"] = to_email
     msg["Subject"] = "Forgot Password"
 
-    verification_link = f"{FRONTEND_URL}/auth/forgot-pw-verification?token={token}"
+    verification_link = f"{FRONTEND_URL}/auth/new-password?token={token}"
     body = f"""
     Hello!
     

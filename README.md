@@ -10,6 +10,7 @@ A robust authentication and user management system built with FastAPI and SQLMod
 - Email verification using custom SMTP configuration
 - PostgreSQL database integration using SQLModel
 - Environment-based configuration
+- Secure password reset with time-limited tokens
 
 ## Project Structure
 
@@ -52,6 +53,7 @@ fastapi_auth/
 - Refresh token for token renewal
 - Password hashing using bcrypt
 - Email verification workflow
+- Secure password reset with time-limited tokens
 
 ### Environment Configuration
 
@@ -78,6 +80,8 @@ SMTP_FROM_EMAIL=your-from-email
 - `POST /token` - Get access token
 - `POST /refresh-token` - Refresh access token
 - `GET /user/verify/{token}` - Verify email address
+- `POST /user/forgot-password` - Request password reset
+- `POST /user/reset-password` - Reset password with token
 
 ### User Management
 
@@ -163,7 +167,8 @@ This backend is designed to work seamlessly with:
 ## Security Considerations
 
 - Passwords are hashed using bcrypt
-- JWT tokens with limited expiry time
+- JWT tokens with configurable expiry
 - Email verification required
-- SSL enabled for database connections
-- Environment-based configuration for sensitive data
+- Timezone-aware token expiration
+- Automatic cleanup of expired tokens
+- Rate limiting on authentication endpoints

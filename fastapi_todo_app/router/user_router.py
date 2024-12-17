@@ -12,6 +12,7 @@ from fastapi_todo_app.schemas.user_schema import (
     ChangePasswordRequest,
     Register_User,
     UpdateSettingsRequest,
+    ResetPasswordRequest,
 )
 from fastapi_todo_app.schemas.verification_schema import VerificationResponse
 from fastapi_todo_app.services.auth import (
@@ -20,6 +21,8 @@ from fastapi_todo_app.services.auth import (
     get_user_from_db,
     hash_password,
     verify_password,
+    verify_reset_token,
+    update_password,
 )
 from fastapi_todo_app.services.email_service import (
     send_forgot_password_email,
@@ -176,3 +179,23 @@ async def forgot_password(
     send_forgot_password_email(user.email, fg_pw_token.token)
 
     return {"message": "Forgot password email sent successfully"}
+
+
+@user_router.post("/reset-password")
+async def reset_password(
+    request: ResetPasswordRequest,
+    session: Annotated[Session, Depends(get_session)],
+):
+    """Reset user's password using the reset token."""
+    user = verify_reset_token(request.token, session)
+    if not user:
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired reset token"
+        )
+
+    if not update_password(user, request.new_password, session):
+        raise HTTPException(
+            status_code=500, detail="Failed to update password"
+        )
+
+    return {"message": "Password updated successfully"}

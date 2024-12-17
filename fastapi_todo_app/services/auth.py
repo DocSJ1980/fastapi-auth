@@ -132,15 +132,60 @@ def get_current_user(
 
 def forgot_password_token(
     user_id: int, session: Annotated[Session, Depends(get_session)]
-):
+) -> ForgotPasswordModel:
+    """Generate a forgot password token for a user."""
+    # Delete any existing tokens for this user
+    statement = select(ForgotPasswordModel).where(ForgotPasswordModel.user_id == user_id)
+    existing_tokens = session.exec(statement).all()
+    for token in existing_tokens:
+        session.delete(token)
+    session.commit()
+
+    # Create new token
     token = secrets.token_urlsafe(32)
     forgot_password_token = ForgotPasswordModel(
         token=token,
         user_id=user_id,
-        created_at=datetime.now(),
-        expires_at=datetime.now() + timedelta(hours=24),
+        created_at=datetime.now(timezone.utc),
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=24)
     )
     session.add(forgot_password_token)
     session.commit()
     session.refresh(forgot_password_token)
     return forgot_password_token
+
+
+def verify_reset_token(token: str, session: Session) -> User | None:
+    """Verify the reset token and return the associated user."""
+    statement = select(ForgotPasswordModel).where(ForgotPasswordModel.token == token)
+    reset_token = session.exec(statement).first()
+    
+    if not reset_token:
+        return None
+        
+    # Check if token is expired
+    if datetime.now(timezone.utc) > reset_token.expires_at:
+        session.delete(reset_token)
+        session.commit()
+        return None
+        
+    statement = select(User).where(User.id == reset_token.user_id)
+    user = session.exec(statement).first()
+    
+    if user:
+        session.delete(reset_token)
+        session.commit()
+        
+    return user
+
+
+def update_password(user: User, new_password: str, session: Session) -> bool:
+    """Update user's password with the new one."""
+    try:
+        user.password = hash_password(new_password)
+        session.add(user)
+        session.commit()
+        return True
+    except Exception:
+        session.rollback()
+        return False

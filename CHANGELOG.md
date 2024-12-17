@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2024-01-09
+## [0.2.0] - 2024-12-09
 
 ### Added
 
@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Todo-related functionality
 - Unnecessary database schema checks
 
-## [0.3.0] - 2024-12-17
+## [0.2.1] - 2024-12-17
 
 ### Added
 
@@ -50,3 +50,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented secure token rotation
 - Enhanced password hashing configuration
 - Added additional security headers
+
+## [0.2.4] - 2024-12-17
+
+### Added
+- Password reset endpoint with token verification
+- Custom timezone-aware datetime handling for tokens
+- New endpoint `/user/reset-password` for password reset
+- ResetPasswordRequest schema for password reset validation
+
+### Changed
+- Updated forgot password email template with new frontend URL
+- Enhanced token handling with proper timezone support
+- Improved password reset workflow security
+- Added automatic cleanup of expired reset tokens
+
+### Security
+- Implemented timezone-aware token expiration
+- Added automatic cleanup of existing tokens on new request
+- Enhanced password reset token validation
