@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
@@ -8,6 +9,7 @@ from passlib.context import CryptContext
 from sqlmodel import Session, select
 
 from fastapi_todo_app.db import get_session
+from fastapi_todo_app.models.forgot_password import ForgotPasswordModel
 from fastapi_todo_app.models.user_model import User
 from fastapi_todo_app.schemas.user_schema import RefreshTokenData, TokenData
 from fastapi_todo_app.settings import (
@@ -108,15 +110,37 @@ def get_current_user(
     token: Annotated[str, Depends(oauth_scheme)],
     session: Annotated[Session, Depends(get_session)],
 ):
+    print("Here")
+    print(f"Token {token}")
     try:
         payload = jwt.decode(token, str(SECRET_KEY), str(ALGORITHM))
+        # print(f"payload: {payload}")
         username: str | None = payload.get("sub")
+        # print(f"username: {username}")
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
+        # print(f"token_data: {token_data}")
     except JWTError:
         raise credentials_exception
     user = get_user_from_db(session, username=token_data.username)
+    # print(f"user: {user}")
     if not user:
         raise credentials_exception
     return user
+
+
+def forgot_password_token(
+    user_id: int, session: Annotated[Session, Depends(get_session)]
+):
+    token = secrets.token_urlsafe(32)
+    forgot_password_token = ForgotPasswordModel(
+        token=token,
+        user_id=user_id,
+        created_at=datetime.now(),
+        expires_at=datetime.now() + timedelta(hours=24),
+    )
+    session.add(forgot_password_token)
+    session.commit()
+    session.refresh(forgot_password_token)
+    return forgot_password_token

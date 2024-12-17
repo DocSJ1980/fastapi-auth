@@ -16,6 +16,12 @@ from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, col, select
 
+from fastapi_todo_app.db import create_tables, get_session
+from fastapi_todo_app.models.todo_model import Todo
+from fastapi_todo_app.models.user_model import User
+from fastapi_todo_app.router import user_router
+from fastapi_todo_app.schemas.todo_schema import Todo_Create, Todo_Edit
+from fastapi_todo_app.schemas.user_schema import Token
 from fastapi_todo_app.services.auth import (
     authenticate_user,
     create_access_token,
@@ -24,13 +30,6 @@ from fastapi_todo_app.services.auth import (
     get_current_user,
     validate_refresh_token,
 )
-from fastapi_todo_app.db import create_tables, get_session
-from fastapi_todo_app.models.todo_model import Todo
-from fastapi_todo_app.models.user_model import User
-from fastapi_todo_app.models.verification_model import VerificationToken
-from fastapi_todo_app.router import user_router
-from fastapi_todo_app.schemas.todo_schema import Todo_Create, Todo_Edit
-from fastapi_todo_app.schemas.user_schema import Token
 from fastapi_todo_app.settings import EXPIRY_TIME, REFRESH_TOKEN_EXPIRY_TIME
 
 
@@ -47,6 +46,7 @@ app: FastAPI = FastAPI(
     title="FastAPI Todo App",
     description="A simple todo app built with FastAPI",
     version="0.1.0",
+    swagger_ui_parameters={"syntaxHighlight.theme": "obsidian"},
 )
 
 app.include_router(router=user_router.user_router)
@@ -62,6 +62,7 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: Annotated[Session, Depends(get_session)],
 ):
+    print(form_data)
     user = authenticate_user(form_data.username, form_data.password, session)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
@@ -69,6 +70,8 @@ async def login(
     access_token = create_access_token({"sub": form_data.username}, expiry_time)
     expiry_time = timedelta(days=int(str(REFRESH_TOKEN_EXPIRY_TIME)))
     refresh_token = create_refresh_token({"sub": user.email}, expiry_time)
+    # print(f"access_token: {access_token}")
+    # print(f"refresh_token: {refresh_token}")
     return Token(
         access_token=access_token, token_type="bearer", refresh_token=refresh_token
     )

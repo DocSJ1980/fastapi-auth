@@ -83,6 +83,20 @@ SMTP_FROM_EMAIL=your-from-email
 
 - `GET /user/me` - Get current user profile
 
+## Frontend Integration
+
+This backend is designed to work seamlessly with:
+
+- Next.js 15.1.0
+- next-auth v5
+
+### Frontend Setup
+
+- Configure next-auth to use JWT authentication
+- Set up API routes for token management
+- Handle refresh token rotation
+- Implement protected routes using next-auth session
+
 ## Setup and Installation
 
 1. Clone the repository:
@@ -116,6 +130,35 @@ SMTP_FROM_EMAIL=your-from-email
    ```bash
    poetry run pytest
    ```
+
+## Git Usage Guidelines
+
+### Commit Message Format
+
+```
+<type>: <summary>
+<BLANK LINE>
+<description>
+```
+
+### Types
+
+- fix: Bug fixes
+- feat: New features
+- perf: Performance improvements
+- docs: Documentation changes
+- style: Formatting changes
+- refactor: Code refactoring
+- test: Adding missing tests
+- chore: Maintenance tasks
+
+### Rules
+
+- Use lowercase for commit messages
+- Keep the summary line concise
+- Create two -m commits per commit
+- Include description for non-obvious changes
+- Reference issue numbers when applicable
 
 ## Security Considerations
 

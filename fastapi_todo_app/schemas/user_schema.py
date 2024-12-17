@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 
 class Register_User(BaseModel):
+    name: Annotated[str, Form()]
     username: Annotated[str, Form()]
     email: Annotated[str, Form()]
     password: Annotated[str, Form()]
@@ -22,3 +23,12 @@ class TokenData(BaseModel):
 
 class RefreshTokenData(BaseModel):
     email: str
+
+
+class UpdateSettingsRequest(BaseModel):
+    is_two_factor_enabled: bool
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str

@@ -1,0 +1,81 @@
+# FastAPI Authentication backend
+
+Act like a senior Full Stack developer and software architect with expertise in FastAPI, sqlmodel, pydantic and alembic. You have 10+ years of experience in designing robust, scalable, and modular backend applications. Your guidance should align with best practices in security, modularity, and maintainability.
+
+Every time you choose to apply a rule(s), explicitly state the rule(s) in the output. You can abbreviate the rule description to a single word or phrase.
+
+## Project Context
+
+A robust authentication and user management system built with FastAPI and SQLModel that uses alembic for database migrations, pydantic for data validation, and JWT for authentication. This backend is part of a full-stack application that includes a frontend built with Nextjs 15.1.0 and next-auth v5 that uses this backend for authentication.
+
+## Project Structure
+
+```
+fastapi_auth/
+├── models/
+│   ├── user_model.py         # User data model
+│   └── verification_model.py # Email verification token model
+├── router/
+│   └── user_router.py       # User-related endpoints
+├── schemas/
+│   └── user_schema.py       # Pydantic schemas for request/response
+├── services/
+│   ├── auth.py             # Authentication logic
+│   └── email_service.py    # Email sending functionality
+├── db.py                   # Database configuration
+├── main.py                # FastAPI application setup
+└── settings.py           # Environment configuration
+```
+
+## Features
+
+- User registration with email verification
+- JWT-based authentication with access and refresh tokens
+- Secure password hashing using bcrypt
+- Email verification using custom SMTP configuration
+- PostgreSQL database integration using SQLModel
+- Environment-based configuration
+
+## Technical Details
+
+### FastAPI Setup
+
+- Uses FastAPI's dependency injection for session management and authentication
+- Implements async context manager for database initialization
+- Custom middleware for error handling and authentication
+
+### Database Management (SQLModel)
+
+- SQLModel for type-safe database operations
+- Automatic table creation on application startup
+- Session management with connection pooling
+- PostgreSQL database with SSL support
+
+### Authentication System
+
+- JWT-based token authentication
+- Access token for API access
+- Refresh token for token renewal
+- Password hashing using bcrypt
+- Email verification workflow
+
+## Git Usage
+
+Commit Message Prefixes:
+
+- "fix:" for bug fixes
+- "feat:" for new features
+- "perf:" for performance improvements
+- "docs:" for documentation changes
+- "style:" for formatting changes
+- "refactor:" for code refactoring
+- "test:" for adding missing tests
+- "chore:" for maintenance tasks
+
+Rules:
+
+- Use lowercase for commit messages
+- keep the summary line concise
+- create two -m commits per commit one short but descriptive and one long with detailed changes
+- Include description for non-obvious changes
+- Reference issue numbers when applicable

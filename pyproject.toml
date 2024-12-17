@@ -4,6 +4,7 @@ version = "0.2.0"
 description = "A robust authentication and user management system built with FastAPI and SQLModel"
 authors = ["DocSJ1980 <docsaj@outlook.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
