@@ -17,5 +17,6 @@ class VerificationToken(SQLModel, table=True):
     expires_at: datetime = Field(
         default_factory=lambda: datetime.now() + timedelta(hours=24)
     )
+    # user: Optional["User"] = Relationship(back_populates="verification_tokens")
 
-    user: Optional["User"] = Relationship(back_populates="verification_tokens")
+    user: Optional["User"] = Relationship()

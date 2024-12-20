@@ -33,10 +33,11 @@ class ForgotPasswordModel(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id")
     created_at: datetime = Field(
         sa_column=Column(TZDateTime(timezone=True)),
-        default_factory=lambda: datetime.now(timezone.utc)
+        default_factory=lambda: datetime.now(timezone.utc),
     )
     expires_at: datetime = Field(
         sa_column=Column(TZDateTime(timezone=True)),
-        default_factory=lambda: datetime.now(timezone.utc) + timedelta(hours=24)
+        default_factory=lambda: datetime.now(timezone.utc) + timedelta(hours=24),
     )
-    user: Optional["User"] = Relationship(back_populates="forgot_password")
+    # user: Optional["User"] = Relationship(back_populates="forgot_password")
+    user: Optional["User"] = Relationship()

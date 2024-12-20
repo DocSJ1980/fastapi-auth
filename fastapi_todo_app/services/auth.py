@@ -1,3 +1,4 @@
+import random
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
@@ -42,8 +43,10 @@ def get_user_from_db(
     username: str | None = None,
     email: str | None = None,
 ):
+    print(f"username: {username}")
     statement = select(User).where(User.username == username)
     user = session.exec(statement).first()
+    print(f"user: {user}")
     if not user:
         statement = select(User).where(User.email == email)
         user = session.exec(statement).first()
@@ -114,17 +117,17 @@ def get_current_user(
     print(f"Token {token}")
     try:
         payload = jwt.decode(token, str(SECRET_KEY), str(ALGORITHM))
-        # print(f"payload: {payload}")
+        print(f"payload: {payload}")
         username: str | None = payload.get("sub")
-        # print(f"username: {username}")
+        print(f"username: {username}")
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
-        # print(f"token_data: {token_data}")
+        print(f"token_data: {token_data}")
     except JWTError:
         raise credentials_exception
-    user = get_user_from_db(session, username=token_data.username)
-    # print(f"user: {user}")
+    user = get_user_from_db(session, email=token_data.username)
+    print(f"user: {user}")
     if not user:
         raise credentials_exception
     return user
@@ -135,7 +138,9 @@ def forgot_password_token(
 ) -> ForgotPasswordModel:
     """Generate a forgot password token for a user."""
     # Delete any existing tokens for this user
-    statement = select(ForgotPasswordModel).where(ForgotPasswordModel.user_id == user_id)
+    statement = select(ForgotPasswordModel).where(
+        ForgotPasswordModel.user_id == user_id
+    )
     existing_tokens = session.exec(statement).all()
     for token in existing_tokens:
         session.delete(token)
@@ -147,7 +152,7 @@ def forgot_password_token(
         token=token,
         user_id=user_id,
         created_at=datetime.now(timezone.utc),
-        expires_at=datetime.now(timezone.utc) + timedelta(hours=24)
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
     )
     session.add(forgot_password_token)
     session.commit()
@@ -159,23 +164,23 @@ def verify_reset_token(token: str, session: Session) -> User | None:
     """Verify the reset token and return the associated user."""
     statement = select(ForgotPasswordModel).where(ForgotPasswordModel.token == token)
     reset_token = session.exec(statement).first()
-    
+
     if not reset_token:
         return None
-        
+
     # Check if token is expired
     if datetime.now(timezone.utc) > reset_token.expires_at:
         session.delete(reset_token)
         session.commit()
         return None
-        
+
     statement = select(User).where(User.id == reset_token.user_id)
     user = session.exec(statement).first()
-    
+
     if user:
         session.delete(reset_token)
         session.commit()
-        
+
     return user
 
 
@@ -189,3 +194,8 @@ def update_password(user: User, new_password: str, session: Session) -> bool:
     except Exception:
         session.rollback()
         return False
+
+
+def generate_two_factor_token() -> str:
+    """Generate a 6-digit 2FA token"""
+    return "".join(random.choices("0123456789", k=6))

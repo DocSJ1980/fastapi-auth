@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import Form
 from pydantic import BaseModel
@@ -37,3 +37,21 @@ class ChangePasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+    code: Optional[str] = None
+
+
+class LoginResponse(BaseModel):
+    success: bool
+    message: str
+    access_token: Optional[str] = None
+    token_type: Optional[str] = None
+    refresh_token: Optional[str] = None
+
+
+class TwoFactorRequest(BaseModel):
+    two_fa_code: str

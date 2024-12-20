@@ -9,7 +9,7 @@
 # Step-9: Create all endpoints of todo app
 
 from contextlib import asynccontextmanager
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, AsyncGenerator
 
 from fastapi import Depends, FastAPI, HTTPException, Response
@@ -18,18 +18,29 @@ from sqlmodel import Session, col, select
 
 from fastapi_todo_app.db import create_tables, get_session
 from fastapi_todo_app.models.todo_model import Todo
+from fastapi_todo_app.models.two_factor_model import (
+    TwoFactorConfirmation,
+    TwoFactorToken,
+)
 from fastapi_todo_app.models.user_model import User
 from fastapi_todo_app.router import user_router
 from fastapi_todo_app.schemas.todo_schema import Todo_Create, Todo_Edit
-from fastapi_todo_app.schemas.user_schema import Token
+from fastapi_todo_app.schemas.user_schema import (
+    LoginRequest,
+    LoginResponse,
+    Token,
+    TwoFactorRequest,
+)
 from fastapi_todo_app.services.auth import (
     authenticate_user,
     create_access_token,
     create_refresh_token,
     credentials_exception,
+    generate_two_factor_token,
     get_current_user,
     validate_refresh_token,
 )
+from fastapi_todo_app.services.email_service import send_two_factor_email
 from fastapi_todo_app.settings import EXPIRY_TIME, REFRESH_TOKEN_EXPIRY_TIME
 
 
@@ -57,23 +68,135 @@ def root():
     return {"message": "Hello World"}
 
 
-@app.post("/token", response_model=Token)
+@app.post("/two-fa-confirm", response_model=LoginResponse)
+async def check_two_factor_confirmation(
+    request: TwoFactorRequest,
+    session: Session = Depends(get_session),
+):
+    token = request.two_fa_code  # Get the code from the request body
+    statement = select(TwoFactorToken).where(TwoFactorToken.token == token)
+    token_record = session.exec(statement).first()
+    print(f"Token from Request data giving token record: {token_record}")
+    try:
+        all_users = session.exec(select(User)).all()
+        print(f"Total users in database: {len(all_users)}")
+        for u in all_users:
+            print(f"User ID: {u.id}, Email: {u.email}")
+    except Exception as e:
+        print(f"Error querying all users: {str(e)}")
+
+    if not token_record:
+        raise HTTPException(status_code=404, detail="Invalid 2FA code")
+
+    token_expires = token_record.expires.replace(tzinfo=timezone.utc)
+    if token_expires < datetime.now(timezone.utc):
+        session.delete(token_record)
+        session.commit()
+        raise HTTPException(status_code=400, detail="2FA code has expired")
+
+    # Try direct SQL query first
+    statement = select(User).where(User.id == token_record.user_id)
+    print(f"SQL Query: {statement}")
+
+    # Execute with error handling
+    try:
+        user = session.exec(statement).first()
+        print(f"User found: {user}")
+    except Exception as e:
+        print(f"Error executing query: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    if not user:
+        print("User not found in database")
+        raise HTTPException(status_code=404, detail="User not found")
+    two_factor_confirmation = TwoFactorConfirmation(
+        expires=datetime.now() + timedelta(minutes=10), user_id=user.id
+    )
+    print(
+        f"TwoFactorConfirmation: {two_factor_confirmation}, user_id: {user.id}, expires: {two_factor_confirmation.expires}"
+    )
+    session.delete(token_record)
+    session.add(two_factor_confirmation)
+    session.commit()
+
+    return LoginResponse(
+        success=True,
+        message="2FA verified successfully",
+        access_token=None,
+        token_type=None,
+        refresh_token=None,
+    )
+
+
+@app.post("/token", response_model=LoginResponse)
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: Annotated[Session, Depends(get_session)],
 ):
-    print(form_data)
     user = authenticate_user(form_data.username, form_data.password, session)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-    expiry_time = timedelta(minutes=float(str(EXPIRY_TIME)))
-    access_token = create_access_token({"sub": form_data.username}, expiry_time)
-    expiry_time = timedelta(days=int(str(REFRESH_TOKEN_EXPIRY_TIME)))
-    refresh_token = create_refresh_token({"sub": user.email}, expiry_time)
-    # print(f"access_token: {access_token}")
-    # print(f"refresh_token: {refresh_token}")
-    return Token(
-        access_token=access_token, token_type="bearer", refresh_token=refresh_token
+
+    if not user.is_verified:
+        return LoginResponse(
+            success=False,
+            message="Please verify your email first",
+        )
+
+    if user.is_two_factor_enabled:
+        statement = select(TwoFactorConfirmation).where(
+            TwoFactorConfirmation.user_id == user.id
+        )
+        two_factor_confirmation = session.exec(statement).first()
+
+        if not two_factor_confirmation:
+            token = generate_two_factor_token()
+            expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+            # Save token to database
+            two_factor_token = TwoFactorToken(
+                token=token, expires=expires, user_id=user.id
+            )
+            session.add(two_factor_token)
+            session.commit()
+
+            # Send token via email
+            print("Sending 2FA code to email", user.email, token)
+            await send_two_factor_email(user.email, token)
+
+            return LoginResponse(
+                success=True,
+                message="2FA code sent to your email",
+            )
+
+        # Check if token has expired
+        if datetime.now() > two_factor_confirmation.expires:
+            # Clean up expired token
+            session.delete(two_factor_confirmation)
+            session.commit()
+            return LoginResponse(
+                success=False,
+                message="2FA code confirmation has expired, please login again",
+            )
+
+        # Clean up used token
+        session.delete(two_factor_confirmation)
+        session.commit()
+
+    # Generate tokens
+    access_token = create_access_token(
+        {"sub": user.email}, timedelta(minutes=float(str(EXPIRY_TIME)))
+    )
+    refresh_token = create_refresh_token(
+        {"sub": user.email}, timedelta(days=int(str(REFRESH_TOKEN_EXPIRY_TIME)))
+    )
+
+    return LoginResponse(
+        success=True,
+        message="Login successful",
+        access_token=access_token,
+        token_type="bearer",
+        refresh_token=refresh_token,
     )
 
 

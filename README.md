@@ -45,6 +45,7 @@ fastapi_auth/
 - Automatic table creation on application startup
 - Session management with connection pooling
 - PostgreSQL database with SSL support
+- For queries use session.exec() instead of session.query() as that has been deprecated.
 
 ### Authentication System
 

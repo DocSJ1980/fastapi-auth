@@ -2,6 +2,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+from fastapi_todo_app.services.auth import generate_two_factor_token
 from fastapi_todo_app.settings import (
     FRONTEND_URL,
     SMTP_FROM_EMAIL,
@@ -73,6 +74,38 @@ def send_forgot_password_email(to_email: str, token: str):
         server.login(str(SMTP_USER), str(SMTP_PASSWORD))
         text = msg.as_string()
         server.sendmail(str(SMTP_FROM_EMAIL), to_email, text)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Failed to send email: {str(e)}")
+        return False
+
+
+async def send_two_factor_email(email: str, token: str):
+    """Send 2FA token via email"""
+    msg = MIMEMultipart()
+    msg["From"] = str(SMTP_FROM_EMAIL)
+    msg["To"] = email
+    msg["Subject"] = "Your Two-Factor Authentication Token"
+
+    body = f"""
+    Hello!
+    
+    Your two-factor authentication token is: {token}
+    
+    This token is valid for a short period of time. Please use it to complete your login process.
+    
+    If you did not request this token, please ignore this email.
+    """
+
+    msg.attach(MIMEText(body, "plain"))
+
+    try:
+        server = smtplib.SMTP(str(SMTP_HOST), int(SMTP_PORT))
+        server.starttls()
+        server.login(str(SMTP_USER), str(SMTP_PASSWORD))
+        text = msg.as_string()
+        server.sendmail(str(SMTP_FROM_EMAIL), email, text)
         server.quit()
         return True
     except Exception as e:
