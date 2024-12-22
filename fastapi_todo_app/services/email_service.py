@@ -43,7 +43,6 @@ def send_verification_email(to_email: str, token: str):
         server.quit()
         return True
     except Exception as e:
-        print(f"Failed to send email: {str(e)}")
         return False
 
 
@@ -77,7 +76,6 @@ def send_forgot_password_email(to_email: str, token: str):
         server.quit()
         return True
     except Exception as e:
-        print(f"Failed to send email: {str(e)}")
         return False
 
 
@@ -109,5 +107,4 @@ async def send_two_factor_email(email: str, token: str):
         server.quit()
         return True
     except Exception as e:
-        print(f"Failed to send email: {str(e)}")
         return False

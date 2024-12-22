@@ -54,18 +54,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.4] - 2024-12-17
 
 ### Added
+
 - Password reset endpoint with token verification
 - Custom timezone-aware datetime handling for tokens
 - New endpoint `/user/reset-password` for password reset
 - ResetPasswordRequest schema for password reset validation
 
 ### Changed
+
 - Updated forgot password email template with new frontend URL
 - Enhanced token handling with proper timezone support
 - Improved password reset workflow security
 - Added automatic cleanup of expired reset tokens
 
 ### Security
+
 - Implemented timezone-aware token expiration
 - Added automatic cleanup of existing tokens on new request
 - Enhanced password reset token validation
+
+## [0.2.5] - 2024-12-22
+
+### Added
+
+- Two-factor authentication system with email verification
+- TwoFactorToken and TwoFactorConfirmation models
+- Email-based 2FA code delivery
+- User settings for enabling/disabling 2FA
+
+### Changed
+
+- Enhanced token validation to support both username and email
+- Improved error handling in authentication flows
+- Optimized database queries for token management
+- Cleaned up debug logging statements
+
+### Security
+
+- Added automatic cleanup of expired 2FA tokens
+- Implemented secure token validation for 2FA

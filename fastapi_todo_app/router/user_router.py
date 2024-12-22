@@ -114,7 +114,6 @@ async def verify_email(token: str, session: Annotated[Session, Depends(get_sessi
 
 @user_router.get("/me")
 async def user_profile(current_user: Annotated[User, Depends(get_current_user)]):
-    print("here")
     return current_user
 
 
@@ -124,7 +123,6 @@ async def update_settings(
     session: Annotated[Session, Depends(get_session)],
     current_user: User = Depends(get_current_user),
 ):
-    print(f"Request data: {request}")
     try:
         # Update user settings
         current_user.is_two_factor_enabled = request.is_two_factor_enabled

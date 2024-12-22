@@ -14,6 +14,7 @@ from typing import Annotated, AsyncGenerator
 
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import and_
 from sqlmodel import Session, col, select
 
 from fastapi_todo_app.db import create_tables, get_session
@@ -46,9 +47,7 @@ from fastapi_todo_app.settings import EXPIRY_TIME, REFRESH_TOKEN_EXPIRY_TIME
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    print("Initializing database...")
     create_tables()
-    print("Database initialized")
     yield
 
 
@@ -76,14 +75,6 @@ async def check_two_factor_confirmation(
     token = request.two_fa_code  # Get the code from the request body
     statement = select(TwoFactorToken).where(TwoFactorToken.token == token)
     token_record = session.exec(statement).first()
-    print(f"Token from Request data giving token record: {token_record}")
-    try:
-        all_users = session.exec(select(User)).all()
-        print(f"Total users in database: {len(all_users)}")
-        for u in all_users:
-            print(f"User ID: {u.id}, Email: {u.email}")
-    except Exception as e:
-        print(f"Error querying all users: {str(e)}")
 
     if not token_record:
         raise HTTPException(status_code=404, detail="Invalid 2FA code")
@@ -94,26 +85,14 @@ async def check_two_factor_confirmation(
         session.commit()
         raise HTTPException(status_code=400, detail="2FA code has expired")
 
-    # Try direct SQL query first
     statement = select(User).where(User.id == token_record.user_id)
-    print(f"SQL Query: {statement}")
-
-    # Execute with error handling
-    try:
-        user = session.exec(statement).first()
-        print(f"User found: {user}")
-    except Exception as e:
-        print(f"Error executing query: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    user = session.exec(statement).first()
 
     if not user:
-        print("User not found in database")
         raise HTTPException(status_code=404, detail="User not found")
+    
     two_factor_confirmation = TwoFactorConfirmation(
         expires=datetime.now() + timedelta(minutes=10), user_id=user.id
-    )
-    print(
-        f"TwoFactorConfirmation: {two_factor_confirmation}, user_id: {user.id}, expires: {two_factor_confirmation.expires}"
     )
     session.delete(token_record)
     session.add(two_factor_confirmation)
@@ -147,9 +126,15 @@ async def login(
         statement = select(TwoFactorConfirmation).where(
             TwoFactorConfirmation.user_id == user.id
         )
-        two_factor_confirmation = session.exec(statement).first()
+        two_factor_confirmation = session.exec(statement).all()
 
-        if not two_factor_confirmation:
+        if len(two_factor_confirmation) == 0:
+            statement = select(TwoFactorToken).where(TwoFactorToken.user_id == user.id)
+            two_factor_tokens = session.exec(statement).all()
+            if len(two_factor_tokens) > 0:
+                for token in two_factor_tokens:
+                    session.delete(token)
+                session.commit()
             token = generate_two_factor_token()
             expires = datetime.now(timezone.utc) + timedelta(minutes=10)
 
@@ -161,7 +146,6 @@ async def login(
             session.commit()
 
             # Send token via email
-            print("Sending 2FA code to email", user.email, token)
             await send_two_factor_email(user.email, token)
 
             return LoginResponse(
@@ -169,18 +153,24 @@ async def login(
                 message="2FA code sent to your email",
             )
 
-        # Check if token has expired
-        if datetime.now() > two_factor_confirmation.expires:
-            # Clean up expired token
-            session.delete(two_factor_confirmation)
+        expired_confirmations = [
+            conf for conf in two_factor_confirmation if datetime.now() > conf.expires
+        ]
+        valid_confirmations = [
+            conf for conf in two_factor_confirmation if datetime.now() <= conf.expires
+        ]
+        if expired_confirmations and len(valid_confirmations) == 0:
+            for conf in expired_confirmations:
+                session.delete(conf)
             session.commit()
             return LoginResponse(
                 success=False,
                 message="2FA code confirmation has expired, please login again",
             )
 
-        # Clean up used token
-        session.delete(two_factor_confirmation)
+        # Clean up all confirmations
+        for conf in two_factor_confirmation:
+            session.delete(conf)
         session.commit()
 
     # Generate tokens

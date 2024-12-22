@@ -6,6 +6,7 @@ A robust authentication and user management system built with FastAPI and SQLMod
 
 - User registration with email verification
 - JWT-based authentication with access and refresh tokens
+- Two-factor authentication with email verification
 - Secure password hashing using bcrypt
 - Email verification using custom SMTP configuration
 - PostgreSQL database integration using SQLModel

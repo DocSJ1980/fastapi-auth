@@ -39,20 +39,17 @@ def verify_password(password, hash_password):
 
 
 def get_user_from_db(
-    session: Annotated[Session, Depends(get_session)],
+    session: Session,
     username: str | None = None,
     email: str | None = None,
 ):
-    print(f"username: {username}")
     statement = select(User).where(User.username == username)
     user = session.exec(statement).first()
-    print(f"user: {user}")
-    if not user:
+    if not user and email:
         statement = select(User).where(User.email == email)
         user = session.exec(statement).first()
         if user:
             return user
-
     return user
 
 
@@ -98,12 +95,15 @@ def validate_refresh_token(
     try:
         payload = jwt.decode(token, str(SECRET_KEY), str(ALGORITHM))
         email: str | None = payload.get("sub")
+        username: str | None = payload.get("sub")
         if email is None:
             raise credentials_exception
-        token_data = RefreshTokenData(email=email)
+        token_data = RefreshTokenData(email=email, username=username)
     except JWTError:
         raise credentials_exception
-    user = get_user_from_db(session, email=token_data.email)
+    user = get_user_from_db(
+        session, email=token_data.email, username=token_data.username
+    )
     if not user:
         raise credentials_exception
     return user
@@ -113,21 +113,23 @@ def get_current_user(
     token: Annotated[str, Depends(oauth_scheme)],
     session: Annotated[Session, Depends(get_session)],
 ):
-    print("Here")
-    print(f"Token {token}")
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
         payload = jwt.decode(token, str(SECRET_KEY), str(ALGORITHM))
-        print(f"payload: {payload}")
+        email: str | None = payload.get("sub")
         username: str | None = payload.get("sub")
-        print(f"username: {username}")
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
-        print(f"token_data: {token_data}")
+        token_data = TokenData(username=username, email=email)
     except JWTError:
         raise credentials_exception
-    user = get_user_from_db(session, email=token_data.username)
-    print(f"user: {user}")
+    user = get_user_from_db(
+        session, email=token_data.email, username=token_data.username
+    )
     if not user:
         raise credentials_exception
     return user
