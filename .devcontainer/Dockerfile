@@ -14,6 +14,6 @@ RUN poetry config virtualenvs.create false && \
 
 COPY . .
 
-EXPOSE 8000
+EXPOSE 8001
 
-CMD ["poetry", "run", "uvicorn", "fastapi_todo_app.main:app", "--reload", "--host", "0.0.0.0",  "--port", "8000"] 
+CMD ["poetry", "run", "uvicorn", "fastapi_todo_app.main:app", "--reload", "--host", "0.0.0.0",  "--port", "8001"] 
