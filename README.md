@@ -82,6 +82,7 @@ SMTP_FROM_EMAIL=your-from-email
 - `POST /token` - Get access token
 - `POST /refresh-token` - Refresh access token
 - `GET /user/verify/{token}` - Verify email address
+- `POST /user/resend-verification-email` - Resend verification email
 - `POST /user/forgot-password` - Request password reset
 - `POST /user/reset-password` - Reset password with token
 

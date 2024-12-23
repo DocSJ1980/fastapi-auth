@@ -194,3 +194,36 @@ async def reset_password(
         raise HTTPException(status_code=500, detail="Failed to update password")
 
     return {"message": "Password updated successfully"}
+
+
+@user_router.post("/resend-verification-email")
+async def resend_verification_email(
+    user_name: str,
+    session: Annotated[Session, Depends(get_session)],
+):
+    current_user = get_user_from_db(session, username=user_name)
+
+    if not current_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if current_user.is_verified:
+        raise HTTPException(status_code=400, detail="User is already verified")
+    exisiting_token = session.exec(
+        select(VerificationToken).where(VerificationToken.user_id == current_user.id)
+    ).all()
+
+    for token in exisiting_token:
+        session.delete(token)
+    session.commit()
+    # Create verification token
+    token = secrets.token_urlsafe(32)
+    verification_token = VerificationToken(token=token, user_id=current_user.id)
+    session.add(verification_token)
+    session.commit()
+
+    # Send verification email
+    send_verification_email(current_user.email, token)
+
+    return {
+        "message": "Verification email resent successfully. Please check your email."
+    }

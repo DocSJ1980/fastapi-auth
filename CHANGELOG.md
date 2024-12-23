@@ -93,3 +93,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added automatic cleanup of expired 2FA tokens
 - Implemented secure token validation for 2FA
+
+## [0.2.6] - 2024-12-23
+
+### Added
+
+- Resend verification email functionality
+- Automatic verification token cleanup for resend requests
+- Enhanced user verification flow with resend capability
+
+### Changed
+
+- Improved error handling for verification process
+- Updated API documentation with new endpoint
+
+### Security
+
+- Implemented token cleanup for expired verification tokens

@@ -13,7 +13,9 @@ SECRET_KEY = config("SECRET_KEY", cast=Secret)
 ALGORITHM = config("ALGORITHM", cast=Secret)
 EXPIRY_TIME = config("EXPIRY_TIME", cast=Secret)
 REFRESH_TOKEN_EXPIRY_TIME = config("REFRESH_TOKEN_EXPIRY_TIME", cast=Secret)
-
+EMAIL_VERIFICATION_TOKEN_EXPIRY_TIME = config(
+    "EMAIL_VERIFICATION_TOKEN_EXPIRY_TIME", cast=int
+)
 # SMTP Settings
 SMTP_HOST = config("SMTP_HOST", cast=str)
 SMTP_PORT = config("SMTP_PORT", cast=int)
