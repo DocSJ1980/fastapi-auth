@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, AsyncGenerator
 
 from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import and_
 from sqlmodel import Session, col, select
@@ -42,7 +43,15 @@ from fastapi_todo_app.services.auth import (
     validate_refresh_token,
 )
 from fastapi_todo_app.services.email_service import send_two_factor_email
-from fastapi_todo_app.settings import EXPIRY_TIME, REFRESH_TOKEN_EXPIRY_TIME
+from fastapi_todo_app.settings import (
+    EXPIRY_TIME,
+    FRONTEND_URL,
+    REFRESH_TOKEN_EXPIRY_TIME,
+)
+
+origins = [
+    FRONTEND_URL,
+]
 
 
 @asynccontextmanager
@@ -58,6 +67,15 @@ app: FastAPI = FastAPI(
     version="0.1.0",
     swagger_ui_parameters={"syntaxHighlight.theme": "obsidian"},
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 app.include_router(router=user_router.user_router)
 
@@ -90,7 +108,7 @@ async def check_two_factor_confirmation(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     two_factor_confirmation = TwoFactorConfirmation(
         expires=datetime.now() + timedelta(minutes=10), user_id=user.id
     )
