@@ -15,7 +15,8 @@ from typing import Annotated, AsyncGenerator
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import and_
+
+# from sqlalchemy import and_
 from sqlmodel import Session, col, select
 
 from fastapi_todo_app.db import create_tables, get_session
