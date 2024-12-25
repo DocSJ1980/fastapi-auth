@@ -24,4 +24,4 @@ SMTP_PASSWORD = config("SMTP_PASSWORD", cast=Secret)
 SMTP_FROM_EMAIL = config("SMTP_FROM_EMAIL", cast=str)
 
 # Frontend URL for email verification
-FRONTEND_URL = config("FRONTEND_URL", cast=str, default="http://localhost:3000")
+FRONTEND_URL = config("FRONTEND_URL", cast=str, default="http://localhost:8003")

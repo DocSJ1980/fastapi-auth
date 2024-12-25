@@ -52,6 +52,7 @@ from fastapi_todo_app.settings import (
 
 origins = [
     FRONTEND_URL,
+    "http://localhost:3000",
 ]
 
 
@@ -79,6 +80,7 @@ app.add_middleware(
 
 
 app.include_router(router=user_router.user_router)
+print(f"Frontend URL: {FRONTEND_URL}")
 
 
 @app.get("/")
