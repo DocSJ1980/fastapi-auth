@@ -23,11 +23,13 @@ from fastapi_todo_app.settings import (
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
-credentials_exception = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="Could not validate credentials",
-    headers={"WWW-Authenticate": "Bearer"},
-)
+
+def create_credentials_exception(detail: str, headers: dict | None = None):
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers=headers or {"WWW-Authenticate": "Bearer"},
+    )
 
 
 def hash_password(password: str):
@@ -43,11 +45,14 @@ def get_user_from_db(
     username: str | None = None,
     email: str | None = None,
 ):
+    print(f"🔍 Searching for user with username: {username}, email: {email}")
     statement = select(User).where(User.username == username)
     user = session.exec(statement).first()
+    print(f"👤 User found by username: {user is not None}")
     if not user and email:
         statement = select(User).where(User.email == email)
         user = session.exec(statement).first()
+        print(f"👤 User found by email: {user is not None}")
         if user:
             return user
     return user
@@ -56,11 +61,13 @@ def get_user_from_db(
 def authenticate_user(
     username, password, session: Annotated[Session, Depends(get_session)]
 ):
+    print(f"🔐 Attempting to authenticate user: {username}")
     db_user = get_user_from_db(session, username)
     if not db_user:
-        return False
+        raise ValueError("User not found")
     if not verify_password(password, db_user.password):
-        return False
+        raise ValueError("Incorrect password")
+    print(f"✅ Authentication successful for user: {username}")
     return db_user
 
 
@@ -97,15 +104,15 @@ def validate_refresh_token(
         email: str | None = payload.get("sub")
         username: str | None = payload.get("sub")
         if email is None:
-            raise credentials_exception
+            raise create_credentials_exception("Token payload missing email field")
         token_data = RefreshTokenData(email=email, username=username)
     except JWTError:
-        raise credentials_exception
+        raise create_credentials_exception("Could not validate token")
     user = get_user_from_db(
         session, email=token_data.email, username=token_data.username
     )
     if not user:
-        raise credentials_exception
+        raise create_credentials_exception("Invalid credentials")
     return user
 
 
@@ -113,25 +120,38 @@ def get_current_user(
     token: Annotated[str, Depends(oauth_scheme)],
     session: Annotated[Session, Depends(get_session)],
 ):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    print(token)
+
     try:
-        payload = jwt.decode(token, str(SECRET_KEY), str(ALGORITHM))
+        print("🚀 ~ file: auth.py:124 ~ token:", token, SECRET_KEY, ALGORITHM)
+        try:
+            payload = jwt.decode(token, str(SECRET_KEY), algorithms=[str(ALGORITHM)])
+            print("🚀 ~ file: auth.py:124 ~ payload:", payload)
+        except jwt.ExpiredSignatureError:
+            raise create_credentials_exception(
+                "Token has expired. Please refresh your token or login again."
+            )
+        except jwt.InvalidTokenError:
+            raise create_credentials_exception("Invalid token format or signature.")
+        except Exception as e:
+            print(f"JWT decode error: {str(e)}")
+            raise create_credentials_exception(f"Failed to decode token: {str(e)}")
+
         email: str | None = payload.get("sub")
         username: str | None = payload.get("sub")
-        if username is None:
-            raise credentials_exception
+        print(f"Email: {email}")
+        print(f"Username: {username}")
+        if username is None and email is None:
+            raise create_credentials_exception("Token payload missing required fields")
         token_data = TokenData(username=username, email=email)
     except JWTError:
-        raise credentials_exception
+        raise create_credentials_exception("Could not validate token")
+
     user = get_user_from_db(
         session, email=token_data.email, username=token_data.username
     )
     if not user:
-        raise credentials_exception
+        raise create_credentials_exception("User not found")
     return user
 
 

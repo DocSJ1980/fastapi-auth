@@ -37,8 +37,8 @@ from fastapi_todo_app.schemas.user_schema import (
 from fastapi_todo_app.services.auth import (
     authenticate_user,
     create_access_token,
+    create_credentials_exception,
     create_refresh_token,
-    credentials_exception,
     generate_two_factor_token,
     get_current_user,
     validate_refresh_token,
@@ -133,9 +133,15 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: Annotated[Session, Depends(get_session)],
 ):
-    user = authenticate_user(form_data.username, form_data.password, session)
+    print("🚀 ~ file: main.py:134 ~ form_data:", form_data.username, form_data.password)
+    try:
+        user = authenticate_user(form_data.username, form_data.password, session)
+    except Exception as e:
+        print(f"Error authenticating user: {str(e)}")
+        raise create_credentials_exception(str(e))
+
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+        raise create_credentials_exception("Invalid username or password")
 
     if not user.is_verified:
         return LoginResponse(
@@ -218,7 +224,7 @@ async def refresh_token(
 ):
     user = validate_refresh_token(old_refresh_token, session)
     if not user:
-        raise credentials_exception
+        raise create_credentials_exception("Invalid credentials")
     expiry_time = timedelta(minutes=float(str(EXPIRY_TIME)))
     access_token = create_access_token({"sub": user.username}, expiry_time)
     expiry_time = timedelta(days=int(str(REFRESH_TOKEN_EXPIRY_TIME)))
